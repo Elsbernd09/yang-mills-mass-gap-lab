@@ -51,6 +51,11 @@ from ymlab.smearing import (
     maximum_su2_link_error,
     smear_spatial_links,
 )
+from ymlab.operator_basis import (
+    create_smearing_basis,
+    ensemble_correlator_matrix,
+    measure_operator_basis,
+)
 from ymlab.su2 import identity as su2_identity
 from ymlab.su2 import is_su2, random_su2
 from ymlab.su3 import (
@@ -558,6 +563,65 @@ def check_spatial_smearing_pipeline() -> str:
         "and retained gauge-invariant scalar operators."
     )
 
+
+def check_operator_correlator_matrix() -> str:
+    lattice = Lattice(
+        shape=(4, 3, 3),
+        cold_start=True,
+        seed=2026,
+    )
+
+    basis = create_smearing_basis(
+        smearing_levels=[
+            0,
+            2,
+        ],
+        alpha=0.5,
+        time_direction=0,
+    )
+
+    ensemble = []
+
+    for _ in range(3):
+        metropolis_sweep(
+            lattice=lattice,
+            beta=2.0,
+            epsilon=0.15,
+        )
+
+        ensemble.append(
+            measure_operator_basis(
+                lattice=lattice,
+                basis=basis,
+            )
+        )
+
+    ensemble = np.asarray(
+        ensemble,
+        dtype=float,
+    )
+
+    result = ensemble_correlator_matrix(
+        ensemble
+    )
+
+    assert (
+        result.correlation_matrices.shape
+        == (4, 2, 2)
+    )
+
+    assert np.allclose(
+        result.correlation_matrices[0],
+        result.correlation_matrices[0].T,
+        atol=1e-10,
+        rtol=1e-10,
+    )
+
+    return (
+        "Multi-operator scalar basis produced a "
+        "finite connected Euclidean correlator matrix."
+    )
+
 def main() -> None:
     checks = [
         ("SU(2) identity/random validation", check_su2_identity_and_random),
@@ -575,6 +639,7 @@ def main() -> None:
         ("Periodic spectroscopy validation", check_periodic_spectroscopy),
         ("Local/global Wilson-action consistency", check_local_global_action_consistency),
         ("Spatial smearing pipeline validation", check_spatial_smearing_pipeline),
+        ("Operator correlator matrix validation", check_operator_correlator_matrix),
     ]
 
     results = [run_check(name, function) for name, function in checks]
