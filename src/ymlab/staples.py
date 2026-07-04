@@ -1,20 +1,17 @@
 """
-Staple construction for SU(2) lattice gauge theory.
+Staple construction and local Wilson-action contributions for SU(2).
 
-In lattice gauge theory, a single link U_mu(x) appears only in the plaquettes
-touching that link. The sum of the neighboring path products is called the
-staple.
+For a positively oriented link U_mu(x), the local plaquette contribution can be
+written in terms of a staple matrix V_mu(x):
 
-For each direction nu != mu, there are two staples:
-1. Forward staple in the +nu direction.
-2. Backward staple in the -nu direction.
+    S_local = -(beta / 2) Re Tr[U_mu(x) V_mu(x)]
 
-The local Wilson contribution involving U_mu(x) can be written using
+up to Wilson-action constants independent of the selected link.
 
-    Re Tr(U_mu(x) * staple)
+The staple contains forward and backward contributions for every nu != mu.
 
-This allows Metropolis updates to compute local action differences instead of
-recomputing the full Wilson action.
+The implementation is validated against full Wilson-action differences in
+multiple lattice dimensions.
 """
 
 from __future__ import annotations
@@ -25,88 +22,147 @@ from ymlab.lattice import Lattice, Site
 from ymlab.su2 import dagger, real_trace
 
 
-def staple(lattice: Lattice, site: Site, mu: int) -> np.ndarray:
+def staple(
+    lattice: Lattice,
+    site: Site,
+    mu: int,
+) -> np.ndarray:
     """
-    Compute the SU(2) staple matrix associated with link U_mu(site).
+    Compute the SU(2) staple sum associated with U_mu(x).
 
-    Parameters
-    ----------
-    lattice:
-        Lattice configuration.
-    site:
-        Starting site x.
-    mu:
-        Link direction.
+    For every nu != mu, the forward contribution is
 
-    Returns
-    -------
-    np.ndarray
-        2x2 complex staple matrix.
+        U_nu(x + mu)
+        U_mu(x + nu)^dagger
+        U_nu(x)^dagger
+
+    and the backward contribution is
+
+        U_nu(x + mu - nu)^dagger
+        U_mu(x - nu)^dagger
+        U_nu(x - nu).
+
+    With this convention, the link-dependent Wilson action is proportional to
+
+        -Re Tr[U_mu(x) staple(x, mu)].
     """
     if mu < 0 or mu >= lattice.dim:
         raise ValueError("Invalid link direction.")
 
-    total = np.zeros((2, 2), dtype=np.complex128)
-    x = site
+    total = np.zeros(
+        (2, 2),
+        dtype=complex,
+    )
 
     for nu in range(lattice.dim):
         if nu == mu:
             continue
 
-        # Forward staple:
-        # U_nu(x + mu) U_mu(x + nu)^dagger U_nu(x)^dagger
-        x_plus_mu = lattice.shift(x, mu, 1)
-        x_plus_nu = lattice.shift(x, nu, 1)
+        x_plus_mu = lattice.shift(
+            site,
+            mu,
+            1,
+        )
+        x_plus_nu = lattice.shift(
+            site,
+            nu,
+            1,
+        )
 
         forward = (
-            lattice.get_link(x_plus_mu, nu)
-            @ dagger(lattice.get_link(x_plus_nu, mu))
-            @ dagger(lattice.get_link(x, nu))
+            lattice.get_link(
+                x_plus_mu,
+                nu,
+            )
+            @ dagger(
+                lattice.get_link(
+                    x_plus_nu,
+                    mu,
+                )
+            )
+            @ dagger(
+                lattice.get_link(
+                    site,
+                    nu,
+                )
+            )
         )
 
-        # Backward staple:
-        # U_nu(x + mu - nu)^dagger U_mu(x - nu)^dagger? 
-        #
-        # For the local action with U_mu(x), the neighboring backward plaquette
-        # contributes the path:
-        # U_nu(x + mu - nu)^dagger U_mu(x - nu)^\dagger? 
-        #
-        # To maintain the local form ReTr(U_mu(x) * staple), the correct path is:
-        # U_nu(x + mu - nu)^dagger U_mu(x - nu)^dagger? not dimensionally correct
-        #
-        # We instead use the standard backward staple:
-        # U_nu(x + mu - nu)^dagger U_mu(x - nu) U_nu(x - nu)
-        x_minus_nu = lattice.shift(x, nu, -1)
-        x_plus_mu_minus_nu = lattice.shift(x_plus_mu, nu, -1)
+        x_minus_nu = lattice.shift(
+            site,
+            nu,
+            -1,
+        )
+        x_plus_mu_minus_nu = lattice.shift(
+            x_minus_nu,
+            mu,
+            1,
+        )
 
         backward = (
-            dagger(lattice.get_link(x_plus_mu_minus_nu, nu))
-            @ lattice.get_link(x_minus_nu, mu)
-            @ lattice.get_link(x_minus_nu, nu)
+            dagger(
+                lattice.get_link(
+                    x_plus_mu_minus_nu,
+                    nu,
+                )
+            )
+            @ dagger(
+                lattice.get_link(
+                    x_minus_nu,
+                    mu,
+                )
+            )
+            @ lattice.get_link(
+                x_minus_nu,
+                nu,
+            )
         )
 
-        total += forward + backward
+        total += forward
+        total += backward
 
     return total
 
 
-def local_link_action(lattice: Lattice, site: Site, mu: int, beta: float) -> float:
+def local_link_action(
+    lattice: Lattice,
+    site: Site,
+    mu: int,
+    beta: float,
+    link_matrix: np.ndarray | None = None,
+) -> float:
     """
-    Compute the local Wilson action contribution involving one link.
+    Compute the link-dependent local Wilson action.
 
-    For SU(2), the link-dependent part is proportional to
+    Wilson-action constants independent of the selected link are omitted.
 
-        - (beta / 2) Re Tr(U_mu(x) * staple)
-
-    Constants independent of the link cancel in Metropolis differences.
+    Therefore this function is intended for action differences.
     """
-    if beta < 0:
+    if beta < 0.0:
         raise ValueError("beta must be nonnegative.")
 
-    u = lattice.get_link(site, mu)
-    st = staple(lattice, site, mu)
+    link = (
+        lattice.get_link(site, mu)
+        if link_matrix is None
+        else np.asarray(
+            link_matrix,
+            dtype=complex,
+        )
+    )
 
-    return -0.5 * beta * real_trace(u @ st)
+    local_staple = staple(
+        lattice=lattice,
+        site=site,
+        mu=mu,
+    )
+
+    return float(
+        -0.5
+        * beta
+        * real_trace(
+            link @ local_staple
+        )
+    )
 
 
 def local_action_difference(
@@ -117,18 +173,25 @@ def local_action_difference(
     beta: float,
 ) -> float:
     """
-    Compute the local action difference for replacing U_mu(site) by proposal.
+    Compute S_local(proposal) - S_local(current link).
 
-    The staple is computed from the current neighboring links. The proposed
-    link is not written into the lattice by this function.
+    The surrounding lattice is held fixed.
     """
-    if beta < 0:
-        raise ValueError("beta must be nonnegative.")
+    old_action = local_link_action(
+        lattice=lattice,
+        site=site,
+        mu=mu,
+        beta=beta,
+    )
 
-    old_link = lattice.get_link(site, mu)
-    st = staple(lattice, site, mu)
+    new_action = local_link_action(
+        lattice=lattice,
+        site=site,
+        mu=mu,
+        beta=beta,
+        link_matrix=proposal,
+    )
 
-    old_local = -0.5 * beta * real_trace(old_link @ st)
-    new_local = -0.5 * beta * real_trace(proposal @ st)
-
-    return new_local - old_local
+    return float(
+        new_action - old_action
+    )

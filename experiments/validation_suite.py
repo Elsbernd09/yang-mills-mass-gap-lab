@@ -57,6 +57,7 @@ from ymlab.su3 import (
     is_traceless,
     random_su3,
 )
+from ymlab.validation import compare_action_differences
 from ymlab.wilson_action import number_of_plaquettes, wilson_action
 
 
@@ -438,6 +439,56 @@ def check_periodic_spectroscopy() -> str:
         "estimator recovered an exact synthetic mass."
     )
 
+
+def check_local_global_action_consistency() -> str:
+    from ymlab.su2 import small_random_su2
+
+    lattice = Lattice(
+        shape=(3, 3, 3),
+        cold_start=False,
+        seed=2026,
+    )
+
+    rng = np.random.default_rng(314159)
+
+    proposals = [
+        ((0, 0, 0), 0),
+        ((1, 2, 0), 1),
+        ((2, 1, 2), 2),
+    ]
+
+    for site, mu in proposals:
+        old_link = lattice.get_link(
+            site,
+            mu,
+        )
+
+        proposal = (
+            small_random_su2(
+                epsilon=0.15,
+                rng=rng,
+            )
+            @ old_link
+        )
+
+        comparison = compare_action_differences(
+            lattice=lattice,
+            site=site,
+            mu=mu,
+            proposal=proposal,
+            beta=2.0,
+            atol=1e-10,
+            rtol=1e-10,
+        )
+
+        assert comparison.consistent
+        assert comparison.absolute_error < 1e-9
+
+    return (
+        "Local staple action differences matched full "
+        "Wilson-action differences on random 3D proposals."
+    )
+
 def main() -> None:
     checks = [
         ("SU(2) identity/random validation", check_su2_identity_and_random),
@@ -453,6 +504,7 @@ def main() -> None:
         ("Correlation-aware resampling validation", check_correlation_aware_resampling),
         ("Scalar glueball-style correlator validation", check_glueball_operator_pipeline),
         ("Periodic spectroscopy validation", check_periodic_spectroscopy),
+        ("Local/global Wilson-action consistency", check_local_global_action_consistency),
     ]
 
     results = [run_check(name, function) for name, function in checks]
