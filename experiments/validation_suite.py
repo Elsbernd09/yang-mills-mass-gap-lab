@@ -29,6 +29,10 @@ from ymlab.gauge_transformations import (
     gauge_transform_lattice,
     random_gauge_field,
 )
+from ymlab.glueball import (
+    ensemble_connected_correlator,
+    scalar_glueball_time_series,
+)
 from ymlab.dimensional_analysis import theoretical_plaquettes_per_site
 from ymlab.lattice import Lattice
 from ymlab.monte_carlo import metropolis_sweep
@@ -334,6 +338,51 @@ def check_correlation_aware_resampling() -> str:
         "returned finite mean uncertainty estimates."
     )
 
+
+def check_glueball_operator_pipeline() -> str:
+    lattice = Lattice(
+        shape=(4, 3, 3),
+        cold_start=True,
+        seed=2026,
+    )
+
+    ensemble = []
+
+    for _ in range(3):
+        metropolis_sweep(
+            lattice=lattice,
+            beta=2.0,
+            epsilon=0.15,
+        )
+
+        ensemble.append(
+            scalar_glueball_time_series(
+                lattice=lattice,
+                time_direction=0,
+            )
+        )
+
+    ensemble = np.asarray(
+        ensemble,
+        dtype=float,
+    )
+
+    result = ensemble_connected_correlator(
+        ensemble
+    )
+
+    assert result.number_of_configurations == 3
+    assert result.temporal_extent == 4
+    assert result.correlation.shape == (4,)
+    assert np.all(
+        np.isfinite(result.correlation)
+    )
+
+    return (
+        "Gauge-invariant scalar operator ensemble and "
+        "connected Euclidean correlator validated."
+    )
+
 def main() -> None:
     checks = [
         ("SU(2) identity/random validation", check_su2_identity_and_random),
@@ -347,6 +396,7 @@ def main() -> None:
         ("Gell-Mann basis validation", check_gell_mann_matrices),
         ("Local gauge-invariance validation", check_gauge_invariance),
         ("Correlation-aware resampling validation", check_correlation_aware_resampling),
+        ("Scalar glueball-style correlator validation", check_glueball_operator_pipeline),
     ]
 
     results = [run_check(name, function) for name, function in checks]
