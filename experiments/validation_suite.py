@@ -47,6 +47,10 @@ from ymlab.spectroscopy import (
     fit_periodic_cosh,
     periodic_cosh_correlator,
 )
+from ymlab.smearing import (
+    maximum_su2_link_error,
+    smear_spatial_links,
+)
 from ymlab.su2 import identity as su2_identity
 from ymlab.su2 import is_su2, random_su2
 from ymlab.su3 import (
@@ -489,6 +493,71 @@ def check_local_global_action_consistency() -> str:
         "Wilson-action differences on random 3D proposals."
     )
 
+
+def check_spatial_smearing_pipeline() -> str:
+    lattice = Lattice(
+        shape=(4, 3, 3),
+        cold_start=True,
+        seed=2026,
+    )
+
+    for _ in range(3):
+        metropolis_sweep(
+            lattice=lattice,
+            beta=2.0,
+            epsilon=0.15,
+        )
+
+    gauge_field = random_gauge_field(
+        lattice=lattice,
+        seed=314159,
+    )
+
+    transformed = gauge_transform_lattice(
+        lattice=lattice,
+        gauge_field=gauge_field,
+    )
+
+    smeared = smear_spatial_links(
+        lattice=lattice,
+        time_direction=0,
+        alpha=0.5,
+        steps=2,
+    )
+
+    transformed_smeared = smear_spatial_links(
+        lattice=transformed,
+        time_direction=0,
+        alpha=0.5,
+        steps=2,
+    )
+
+    operator_before = scalar_glueball_time_series(
+        lattice=smeared,
+        time_direction=0,
+    )
+
+    operator_after = scalar_glueball_time_series(
+        lattice=transformed_smeared,
+        time_direction=0,
+    )
+
+    assert np.allclose(
+        operator_before,
+        operator_after,
+        atol=1e-8,
+        rtol=1e-8,
+    )
+
+    assert maximum_su2_link_error(
+        smeared
+    ) < 1e-8
+
+    return (
+        "Spatial smearing preserved SU(2) numerically "
+        "and retained gauge-invariant scalar operators."
+    )
+
 def main() -> None:
     checks = [
         ("SU(2) identity/random validation", check_su2_identity_and_random),
@@ -505,6 +574,7 @@ def main() -> None:
         ("Scalar glueball-style correlator validation", check_glueball_operator_pipeline),
         ("Periodic spectroscopy validation", check_periodic_spectroscopy),
         ("Local/global Wilson-action consistency", check_local_global_action_consistency),
+        ("Spatial smearing pipeline validation", check_spatial_smearing_pipeline),
     ]
 
     results = [run_check(name, function) for name, function in checks]
