@@ -33,6 +33,10 @@ from ymlab.gauge_transformations import (
     gauge_transform_lattice,
     random_gauge_field,
 )
+from ymlab.gevp_bootstrap import (
+    match_states_to_reference,
+    summarize_bootstrap_distribution,
+)
 from ymlab.glueball import (
     ensemble_connected_correlator,
     scalar_glueball_time_series,
@@ -783,6 +787,109 @@ def check_correlated_spectroscopy_fit() -> str:
         "periodic-cosh fit recovered exact synthetic parameters."
     )
 
+
+def check_gevp_bootstrap_state_matching() -> str:
+    reference_vectors = np.eye(
+        2,
+        dtype=float,
+    )
+
+    candidate_vectors = np.array(
+        [
+            [0.0, -1.0],
+            [1.0, 0.0],
+        ],
+        dtype=float,
+    )
+
+    candidate_values = np.array(
+        [
+            2.0,
+            1.0,
+        ],
+        dtype=float,
+    )
+
+    match = match_states_to_reference(
+        reference_vectors=reference_vectors,
+        candidate_vectors=candidate_vectors,
+        candidate_values=candidate_values,
+        metric_matrix=np.eye(
+            2,
+            dtype=float,
+        ),
+    )
+
+    assert np.array_equal(
+        match.permutation,
+        np.array(
+            [
+                1,
+                0,
+            ],
+            dtype=int,
+        ),
+    )
+
+    assert np.allclose(
+        match.matched_values,
+        np.array(
+            [
+                1.0,
+                2.0,
+            ]
+        ),
+    )
+
+    assert np.allclose(
+        match.matched_vectors,
+        reference_vectors,
+        atol=1e-12,
+        rtol=1e-12,
+    )
+
+    samples = np.array(
+        [
+            [
+                [1.0, 2.0],
+                [3.0, 4.0],
+            ],
+            [
+                [2.0, 3.0],
+                [4.0, 5.0],
+            ],
+            [
+                [3.0, 4.0],
+                [5.0, 6.0],
+            ],
+        ],
+        dtype=float,
+    )
+
+    summary = summarize_bootstrap_distribution(
+        samples,
+        confidence_level=0.95,
+    )
+
+    assert np.isclose(
+        summary.mean[
+            0,
+            0,
+        ],
+        2.0,
+    )
+
+    assert summary.finite_counts[
+        1,
+        1,
+    ] == 3
+
+    return (
+        "Metric state matching recovered an exact "
+        "permutation/sign transformation and bootstrap "
+        "summaries preserved finite sample counts."
+    )
+
 def main() -> None:
     checks = [
         ("SU(2) identity/random validation", check_su2_identity_and_random),
@@ -803,6 +910,7 @@ def main() -> None:
         ("Operator correlator matrix validation", check_operator_correlator_matrix),
         ("Generalized eigenvalue validation", check_generalized_eigenvalue_pipeline),
         ("Correlated spectroscopy fit validation", check_correlated_spectroscopy_fit),
+        ("GEVP bootstrap state-matching validation", check_gevp_bootstrap_state_matching),
     ]
 
     results = [run_check(name, function) for name, function in checks]
