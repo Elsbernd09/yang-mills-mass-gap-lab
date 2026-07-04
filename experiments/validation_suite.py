@@ -1,0 +1,255 @@
+"""
+Validation suite for the Yang-Mills Mass Gap Laboratory.
+
+This script runs internal consistency checks across the project:
+
+1. SU(2) identity and random matrices are valid.
+2. Cold-start lattice has plaquette = identity.
+3. Cold-start Wilson action is zero.
+4. Cold-start Wilson loops equal one.
+5. Metropolis updates preserve SU(2) link structure.
+6. Creutz ratio recovers exact synthetic area-law string tension.
+7. Dimension-dependent lattice counts match expected formulas.
+8. SU(3) Gell-Mann matrices are Hermitian, traceless, and normalized.
+
+This is not a proof of Yang-Mills theory. It is a validation suite for the
+finite-lattice computational framework.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from math import comb
+import traceback
+
+import numpy as np
+
+from ymlab.creutz import creutz_ratio_from_values
+from ymlab.dimensional_analysis import theoretical_plaquettes_per_site
+from ymlab.lattice import Lattice
+from ymlab.monte_carlo import metropolis_sweep
+from ymlab.observables import rectangular_wilson_loop
+from ymlab.plaquette import average_plaquette, plaquette
+from ymlab.su2 import identity as su2_identity
+from ymlab.su2 import is_su2, random_su2
+from ymlab.su3 import (
+    gell_mann_matrices,
+    identity as su3_identity,
+    is_hermitian,
+    is_su3,
+    is_traceless,
+    random_su3,
+)
+from ymlab.wilson_action import number_of_plaquettes, wilson_action
+
+
+@dataclass
+class ValidationCheck:
+    """Single validation check result."""
+
+    name: str
+    passed: bool
+    details: str
+
+
+def run_check(name: str, function) -> ValidationCheck:
+    """Run one validation check safely."""
+    try:
+        details = function()
+        return ValidationCheck(name=name, passed=True, details=details)
+    except Exception as error:
+        return ValidationCheck(
+            name=name,
+            passed=False,
+            details=f"{type(error).__name__}: {error}\n{traceback.format_exc()}",
+        )
+
+
+def check_su2_identity_and_random() -> str:
+    rng = np.random.default_rng(2026)
+
+    assert is_su2(su2_identity())
+
+    for _ in range(20):
+        u = random_su2(rng)
+        assert is_su2(u)
+
+    return "SU(2) identity and 20 random SU(2) samples validated."
+
+
+def check_cold_start_plaquette() -> str:
+    lattice = Lattice(shape=(6, 6), cold_start=True)
+
+    up = plaquette(lattice, site=(0, 0), mu=0, nu=1)
+
+    assert np.allclose(up, su2_identity())
+    assert np.isclose(average_plaquette(lattice), 1.0)
+
+    return "Cold-start plaquette equals identity and average plaquette equals 1."
+
+
+def check_cold_start_wilson_action() -> str:
+    lattice = Lattice(shape=(6, 6), cold_start=True)
+
+    action = wilson_action(lattice, beta=2.0)
+
+    assert np.isclose(action, 0.0)
+
+    return "Cold-start Wilson action equals 0."
+
+
+def check_cold_start_wilson_loop() -> str:
+    lattice = Lattice(shape=(6, 6), cold_start=True)
+
+    for width in [1, 2, 3]:
+        for height in [1, 2, 3]:
+            value = rectangular_wilson_loop(
+                lattice=lattice,
+                site=(0, 0),
+                mu=0,
+                nu=1,
+                width=width,
+                height=height,
+            )
+            assert np.isclose(value, 1.0)
+
+    return "Cold-start rectangular Wilson loops up to 3x3 equal 1."
+
+
+def check_metropolis_preserves_su2() -> str:
+    lattice = Lattice(shape=(4, 4), cold_start=True, seed=2026)
+
+    for _ in range(5):
+        metropolis_sweep(lattice, beta=2.0, epsilon=0.15)
+
+    for site in lattice.sites():
+        for mu in range(lattice.dim):
+            assert is_su2(lattice.get_link(site, mu), atol=1e-8)
+
+    return "Five Metropolis sweeps preserved SU(2) link membership."
+
+
+def check_creutz_exact_area_law() -> str:
+    sigma = 0.35
+
+    def w(width: int, height: int) -> float:
+        return float(np.exp(-sigma * width * height))
+
+    result = creutz_ratio_from_values(
+        w_rt=w(2, 2),
+        w_r1_t1=w(1, 1),
+        w_rt1=w(2, 1),
+        w_r1_t=w(1, 2),
+        width=2,
+        height=2,
+    )
+
+    assert result.valid
+    assert np.isclose(result.value, sigma)
+
+    return f"Creutz ratio recovered exact synthetic area-law sigma={sigma}."
+
+
+def check_dimension_counts() -> str:
+    shapes = [
+        (6, 6),
+        (4, 4, 4),
+        (3, 3, 3, 3),
+    ]
+
+    for shape in shapes:
+        lattice = Lattice(shape=shape, cold_start=True)
+        dimension = len(shape)
+        sites = lattice.number_of_sites()
+        expected_links = sites * dimension
+        expected_plaquettes = sites * comb(dimension, 2)
+
+        assert lattice.number_of_links() == expected_links
+        assert number_of_plaquettes(lattice) == expected_plaquettes
+        assert theoretical_plaquettes_per_site(dimension) == comb(dimension, 2)
+
+    return "2D, 3D, and 4D lattice site/link/plaquette counts validated."
+
+
+def check_su3_identity_and_random() -> str:
+    rng = np.random.default_rng(2026)
+
+    assert is_su3(su3_identity())
+
+    for _ in range(10):
+        u = random_su3(rng)
+        assert is_su3(u, atol=1e-8)
+
+    return "SU(3) identity and 10 random SU(3) samples validated."
+
+
+def check_gell_mann_matrices() -> str:
+    matrices = gell_mann_matrices()
+
+    assert len(matrices) == 8
+
+    for matrix in matrices:
+        assert is_hermitian(matrix)
+        assert is_traceless(matrix)
+
+    for i, a in enumerate(matrices):
+        for j, b in enumerate(matrices):
+            trace_value = np.trace(a @ b)
+
+            if i == j:
+                assert np.isclose(trace_value, 2.0)
+            else:
+                assert np.isclose(trace_value, 0.0)
+
+    return "Gell-Mann matrices are Hermitian, traceless, and normalized."
+
+
+def main() -> None:
+    checks = [
+        ("SU(2) identity/random validation", check_su2_identity_and_random),
+        ("Cold-start plaquette validation", check_cold_start_plaquette),
+        ("Cold-start Wilson action validation", check_cold_start_wilson_action),
+        ("Cold-start Wilson loop validation", check_cold_start_wilson_loop),
+        ("Metropolis SU(2) preservation validation", check_metropolis_preserves_su2),
+        ("Creutz exact area-law validation", check_creutz_exact_area_law),
+        ("Dimension count validation", check_dimension_counts),
+        ("SU(3) identity/random validation", check_su3_identity_and_random),
+        ("Gell-Mann basis validation", check_gell_mann_matrices),
+    ]
+
+    results = [run_check(name, function) for name, function in checks]
+
+    print("Yang-Mills Mass Gap Laboratory Validation Suite")
+    print("=" * 72)
+    print()
+
+    for result in results:
+        status = "PASS" if result.passed else "FAIL"
+        print(f"[{status}] {result.name}")
+        print(f"       {result.details.splitlines()[0]}")
+        print()
+
+    passed = sum(result.passed for result in results)
+    total = len(results)
+
+    print("=" * 72)
+    print(f"Validation checks passed: {passed}/{total}")
+
+    if passed != total:
+        print()
+        print("Failure details:")
+        print("-" * 72)
+
+        for result in results:
+            if not result.passed:
+                print(f"{result.name}")
+                print(result.details)
+                print("-" * 72)
+
+        raise SystemExit(1)
+
+    print("All validation checks passed.")
+
+
+if __name__ == "__main__":
+    main()
