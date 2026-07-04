@@ -34,6 +34,10 @@ from ymlab.lattice import Lattice
 from ymlab.monte_carlo import metropolis_sweep
 from ymlab.observables import rectangular_wilson_loop
 from ymlab.plaquette import average_plaquette, plaquette
+from ymlab.resampling import (
+    delete_one_block_jackknife_mean,
+    moving_block_bootstrap_mean,
+)
 from ymlab.su2 import identity as su2_identity
 from ymlab.su2 import is_su2, random_su2
 from ymlab.su3 import (
@@ -286,6 +290,50 @@ def check_gauge_invariance() -> str:
         "average plaquette, and a closed Wilson loop."
     )
 
+
+def check_correlation_aware_resampling() -> str:
+    values = np.array(
+        [
+            0.1,
+            0.2,
+            0.3,
+            0.4,
+            0.5,
+            0.6,
+            0.7,
+            0.8,
+        ],
+        dtype=float,
+    )
+
+    bootstrap = moving_block_bootstrap_mean(
+        values=values,
+        block_size=2,
+        n_bootstrap=200,
+        seed=2026,
+    )
+
+    jackknife = delete_one_block_jackknife_mean(
+        values=values,
+        block_size=2,
+    )
+
+    assert np.isclose(
+        bootstrap.estimate,
+        np.mean(values),
+    )
+    assert bootstrap.standard_error >= 0.0
+    assert np.isclose(
+        jackknife.estimate,
+        np.mean(values),
+    )
+    assert jackknife.standard_error >= 0.0
+
+    return (
+        "Moving-block bootstrap and block jackknife "
+        "returned finite mean uncertainty estimates."
+    )
+
 def main() -> None:
     checks = [
         ("SU(2) identity/random validation", check_su2_identity_and_random),
@@ -298,6 +346,7 @@ def main() -> None:
         ("SU(3) identity/random validation", check_su3_identity_and_random),
         ("Gell-Mann basis validation", check_gell_mann_matrices),
         ("Local gauge-invariance validation", check_gauge_invariance),
+        ("Correlation-aware resampling validation", check_correlation_aware_resampling),
     ]
 
     results = [run_check(name, function) for name, function in checks]
