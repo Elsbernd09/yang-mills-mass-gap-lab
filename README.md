@@ -87,3 +87,17 @@ The long-term goal is to create a clean, reproducible, mathematically transparen
 - Hybrid Metropolis-overrelaxation update schedules
 - Observable-dependent integrated autocorrelation comparisons
 - Effective sample size per second sampling-efficiency benchmarks
+
+
+## Generic Gauge-Group Architecture
+
+- Group-aware GaugeLattice architecture
+- Matrix dimension supplied by the active gauge-group backend
+- Strict backend-driven link membership validation
+- Generic plaquettes and normalized Wilson observables
+- Generic Wilson action using backend-provided multiplicative 1/N trace normalization
+- Generic reverse-oriented local staples
+- Generic local Metropolis action differences
+- Generic rectangular Wilson loops
+- Numerical SU(2) old-versus-generic backend equivalence audit
+- Working SU(3) GaugeLattice and Metropolis prototype path

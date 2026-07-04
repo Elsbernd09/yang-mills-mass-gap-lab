@@ -85,6 +85,12 @@ from ymlab.variational import (
 from ymlab.overrelaxation import (
     overrelaxation_sweep,
 )
+from ymlab.gauge_lattice import GaugeLattice
+from ymlab.generic_gauge import (
+    generic_average_plaquette,
+    generic_wilson_action,
+)
+from ymlab.group_interface import su2_group
 from ymlab.validation import compare_action_differences
 from ymlab.wilson_action import number_of_plaquettes, wilson_action
 
@@ -1011,6 +1017,56 @@ def check_microcanonical_overrelaxation() -> str:
         "local staple action to numerical precision."
     )
 
+
+def check_generic_gauge_lattice_backend() -> str:
+    lattice = GaugeLattice(
+        shape=(4, 4, 4),
+        group=su2_group(),
+        cold_start=True,
+        seed=2026,
+    )
+
+    assert lattice.number_of_sites() == 64
+
+    assert lattice.number_of_links() == 192
+
+    assert np.isclose(
+        generic_average_plaquette(
+            lattice
+        ),
+        1.0,
+        atol=1e-12,
+        rtol=1e-12,
+    )
+
+    assert np.isclose(
+        generic_wilson_action(
+            lattice,
+            beta=2.0,
+        ),
+        0.0,
+        atol=1e-12,
+        rtol=1e-12,
+    )
+
+    for site in lattice.sites():
+        for mu in range(
+            lattice.dim
+        ):
+            assert lattice.group.is_member(
+                lattice.get_link(
+                    site,
+                    mu,
+                )
+            )
+
+    return (
+        "Generic GaugeLattice carried an SU(2) "
+        "cold configuration with correct geometry, "
+        "plaquette normalization, Wilson action, "
+        "and strict group membership."
+    )
+
 def main() -> None:
     checks = [
         ("SU(2) identity/random validation", check_su2_identity_and_random),
@@ -1034,6 +1090,7 @@ def main() -> None:
         ("GEVP bootstrap state-matching validation", check_gevp_bootstrap_state_matching),
         ("Correlated principal-state fit validation", check_correlated_principal_fit),
         ("Microcanonical overrelaxation validation", check_microcanonical_overrelaxation),
+        ("Generic GaugeLattice backend validation", check_generic_gauge_lattice_backend),
     ]
 
     results = [run_check(name, function) for name, function in checks]
