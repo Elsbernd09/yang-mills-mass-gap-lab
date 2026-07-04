@@ -1,0 +1,18 @@
+[project]
+name = "yang-mills-mass-gap-lab"
+version = "0.1.0"
+description = "A computational and mathematical laboratory for studying Yang-Mills theory, lattice gauge theory, Wilson loops, and numerical mass-gap behavior."
+authors = [
+    { name = "Michael Elsbernd" }
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "scipy",
+    "matplotlib"
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
