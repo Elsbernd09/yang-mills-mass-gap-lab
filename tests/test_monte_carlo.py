@@ -96,3 +96,33 @@ def test_run_metropolis_observables_are_finite():
     assert np.all(np.isfinite(result.actions))
     assert np.all(np.isfinite(result.acceptance_rates))
     assert np.all(np.isfinite(result.average_plaquettes))
+
+
+def test_run_metropolis_burn_in_reduces_measurements():
+    lattice = Lattice(shape=(3, 3), cold_start=True, seed=123)
+
+    result = run_metropolis(
+        lattice=lattice,
+        beta=2.0,
+        sweeps=10,
+        epsilon=0.1,
+        measurement_interval=1,
+        burn_in=5,
+    )
+
+    assert len(result.actions) == 5
+    assert result.burn_in == 5
+    assert result.total_sweeps == 10
+
+
+def test_run_metropolis_rejects_bad_burn_in():
+    lattice = Lattice(shape=(3, 3), cold_start=True, seed=123)
+
+    with pytest.raises(ValueError):
+        run_metropolis(
+            lattice=lattice,
+            beta=2.0,
+            sweeps=10,
+            epsilon=0.1,
+            burn_in=10,
+        )

@@ -8,8 +8,7 @@ This module implements local staple-based Metropolis updates:
 4. Compute the local Wilson action difference.
 5. Accept with probability min(1, exp(-Delta S)).
 
-This is closer to standard lattice gauge theory practice than recomputing the
-entire Wilson action after every proposed link update.
+The simulation runner supports burn-in and measurement intervals.
 """
 
 from __future__ import annotations
@@ -32,6 +31,9 @@ class MetropolisResult:
     actions: list[float]
     acceptance_rates: list[float]
     average_plaquettes: list[float]
+    burn_in: int = 0
+    total_sweeps: int = 0
+    measurement_interval: int = 1
 
 
 def metropolis_link_update(
@@ -104,15 +106,37 @@ def run_metropolis(
     sweeps: int,
     epsilon: float = 0.1,
     measurement_interval: int = 1,
+    burn_in: int = 0,
 ) -> MetropolisResult:
     """
     Run a Metropolis-Hastings simulation and record diagnostics.
+
+    Parameters
+    ----------
+    lattice:
+        Lattice configuration.
+    beta:
+        Wilson action coupling parameter.
+    sweeps:
+        Total number of sweeps, including burn-in.
+    epsilon:
+        Proposal size.
+    measurement_interval:
+        Record measurements every this many sweeps after burn-in.
+    burn_in:
+        Number of initial sweeps discarded before measurements begin.
     """
     if sweeps <= 0:
         raise ValueError("sweeps must be positive.")
 
     if measurement_interval <= 0:
         raise ValueError("measurement_interval must be positive.")
+
+    if burn_in < 0:
+        raise ValueError("burn_in must be nonnegative.")
+
+    if burn_in >= sweeps:
+        raise ValueError("burn_in must be smaller than sweeps.")
 
     actions: list[float] = []
     acceptance_rates: list[float] = []
@@ -121,7 +145,7 @@ def run_metropolis(
     for sweep in range(1, sweeps + 1):
         acceptance_rate = metropolis_sweep(lattice, beta=beta, epsilon=epsilon)
 
-        if sweep % measurement_interval == 0:
+        if sweep > burn_in and (sweep - burn_in) % measurement_interval == 0:
             actions.append(wilson_action(lattice, beta))
             acceptance_rates.append(acceptance_rate)
             average_plaquettes.append(average_plaquette(lattice))
@@ -130,4 +154,7 @@ def run_metropolis(
         actions=actions,
         acceptance_rates=acceptance_rates,
         average_plaquettes=average_plaquettes,
+        burn_in=burn_in,
+        total_sweeps=sweeps,
+        measurement_interval=measurement_interval,
     )
