@@ -42,6 +42,11 @@ from ymlab.resampling import (
     delete_one_block_jackknife_mean,
     moving_block_bootstrap_mean,
 )
+from ymlab.spectroscopy import (
+    arccosh_effective_mass,
+    fit_periodic_cosh,
+    periodic_cosh_correlator,
+)
 from ymlab.su2 import identity as su2_identity
 from ymlab.su2 import is_su2, random_su2
 from ymlab.su3 import (
@@ -383,6 +388,56 @@ def check_glueball_operator_pipeline() -> str:
         "connected Euclidean correlator validated."
     )
 
+
+def check_periodic_spectroscopy() -> str:
+    temporal_extent = 10
+    exact_mass = 0.625
+
+    correlation = periodic_cosh_correlator(
+        lag=np.arange(
+            temporal_extent,
+            dtype=float,
+        ),
+        amplitude=1.5,
+        mass=exact_mass,
+        temporal_extent=temporal_extent,
+    )
+
+    effective_mass = arccosh_effective_mass(
+        correlation
+    )
+
+    finite_mass = effective_mass[
+        np.isfinite(effective_mass)
+    ]
+
+    assert len(finite_mass) > 0
+
+    assert np.allclose(
+        finite_mass,
+        exact_mass,
+        atol=1e-10,
+        rtol=1e-10,
+    )
+
+    fit = fit_periodic_cosh(
+        correlation=correlation,
+        fit_start=1,
+        fit_stop=5,
+    )
+
+    assert fit.success
+    assert np.isclose(
+        fit.mass,
+        exact_mass,
+        atol=1e-7,
+    )
+
+    return (
+        "Periodic cosh fit and arccosh effective-mass "
+        "estimator recovered an exact synthetic mass."
+    )
+
 def main() -> None:
     checks = [
         ("SU(2) identity/random validation", check_su2_identity_and_random),
@@ -397,6 +452,7 @@ def main() -> None:
         ("Local gauge-invariance validation", check_gauge_invariance),
         ("Correlation-aware resampling validation", check_correlation_aware_resampling),
         ("Scalar glueball-style correlator validation", check_glueball_operator_pipeline),
+        ("Periodic spectroscopy validation", check_periodic_spectroscopy),
     ]
 
     results = [run_check(name, function) for name, function in checks]
