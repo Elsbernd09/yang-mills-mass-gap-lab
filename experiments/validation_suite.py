@@ -24,6 +24,10 @@ import traceback
 
 import numpy as np
 
+from ymlab.covariance_fits import (
+    fit_correlated_periodic_cosh,
+    regularized_inverse_covariance,
+)
 from ymlab.creutz import creutz_ratio_from_values
 from ymlab.gauge_transformations import (
     gauge_transform_lattice,
@@ -710,6 +714,75 @@ def check_generalized_eigenvalue_pipeline() -> str:
         "principal correlators and variational masses."
     )
 
+
+def check_correlated_spectroscopy_fit() -> str:
+    temporal_extent = 10
+    exact_amplitude = 1.4
+    exact_mass = 0.57
+
+    correlation = periodic_cosh_correlator(
+        lag=np.arange(
+            temporal_extent,
+            dtype=float,
+        ),
+        amplitude=exact_amplitude,
+        mass=exact_mass,
+        temporal_extent=temporal_extent,
+    )
+
+    covariance = np.full(
+        (
+            temporal_extent,
+            temporal_extent,
+        ),
+        1e-5,
+        dtype=float,
+    )
+
+    covariance += np.eye(
+        temporal_extent,
+        dtype=float,
+    ) * 9e-5
+
+    inverse_result = (
+        regularized_inverse_covariance(
+            covariance=covariance,
+            relative_cutoff=1e-12,
+        )
+    )
+
+    assert inverse_result.retained_rank == temporal_extent
+
+    fit = fit_correlated_periodic_cosh(
+        correlation=correlation,
+        covariance=covariance,
+        fit_start=1,
+        fit_stop=5,
+        shrinkage=0.05,
+        relative_cutoff=1e-12,
+    )
+
+    assert fit.success
+
+    assert np.isclose(
+        fit.mass,
+        exact_mass,
+        atol=1e-5,
+        rtol=1e-5,
+    )
+
+    assert np.isclose(
+        fit.amplitude,
+        exact_amplitude,
+        atol=1e-5,
+        rtol=1e-5,
+    )
+
+    return (
+        "Regularized inverse covariance and correlated "
+        "periodic-cosh fit recovered exact synthetic parameters."
+    )
+
 def main() -> None:
     checks = [
         ("SU(2) identity/random validation", check_su2_identity_and_random),
@@ -729,6 +802,7 @@ def main() -> None:
         ("Spatial smearing pipeline validation", check_spatial_smearing_pipeline),
         ("Operator correlator matrix validation", check_operator_correlator_matrix),
         ("Generalized eigenvalue validation", check_generalized_eigenvalue_pipeline),
+        ("Correlated spectroscopy fit validation", check_correlated_spectroscopy_fit),
     ]
 
     results = [run_check(name, function) for name, function in checks]
