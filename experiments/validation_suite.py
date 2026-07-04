@@ -25,6 +25,10 @@ import traceback
 import numpy as np
 
 from ymlab.creutz import creutz_ratio_from_values
+from ymlab.gauge_transformations import (
+    gauge_transform_lattice,
+    random_gauge_field,
+)
 from ymlab.dimensional_analysis import theoretical_plaquettes_per_site
 from ymlab.lattice import Lattice
 from ymlab.monte_carlo import metropolis_sweep
@@ -204,6 +208,84 @@ def check_gell_mann_matrices() -> str:
     return "Gell-Mann matrices are Hermitian, traceless, and normalized."
 
 
+
+def check_gauge_invariance() -> str:
+    lattice = Lattice(
+        shape=(4, 4),
+        cold_start=True,
+        seed=2026,
+    )
+
+    for _ in range(4):
+        metropolis_sweep(
+            lattice,
+            beta=2.0,
+            epsilon=0.15,
+        )
+
+    gauge_field = random_gauge_field(
+        lattice,
+        seed=314159,
+    )
+
+    transformed = gauge_transform_lattice(
+        lattice,
+        gauge_field,
+    )
+
+    action_before = wilson_action(
+        lattice,
+        beta=2.0,
+    )
+    action_after = wilson_action(
+        transformed,
+        beta=2.0,
+    )
+
+    plaquette_before = average_plaquette(lattice)
+    plaquette_after = average_plaquette(transformed)
+
+    loop_before = rectangular_wilson_loop(
+        lattice=lattice,
+        site=(0, 0),
+        mu=0,
+        nu=1,
+        width=2,
+        height=2,
+    )
+    loop_after = rectangular_wilson_loop(
+        lattice=transformed,
+        site=(0, 0),
+        mu=0,
+        nu=1,
+        width=2,
+        height=2,
+    )
+
+    assert np.isclose(
+        action_before,
+        action_after,
+        atol=1e-8,
+        rtol=1e-8,
+    )
+    assert np.isclose(
+        plaquette_before,
+        plaquette_after,
+        atol=1e-8,
+        rtol=1e-8,
+    )
+    assert np.isclose(
+        loop_before,
+        loop_after,
+        atol=1e-8,
+        rtol=1e-8,
+    )
+
+    return (
+        "Random local gauge transformation preserved Wilson action, "
+        "average plaquette, and a closed Wilson loop."
+    )
+
 def main() -> None:
     checks = [
         ("SU(2) identity/random validation", check_su2_identity_and_random),
@@ -215,6 +297,7 @@ def main() -> None:
         ("Dimension count validation", check_dimension_counts),
         ("SU(3) identity/random validation", check_su3_identity_and_random),
         ("Gell-Mann basis validation", check_gell_mann_matrices),
+        ("Local gauge-invariance validation", check_gauge_invariance),
     ]
 
     results = [run_check(name, function) for name, function in checks]
