@@ -46,6 +46,10 @@ from ymlab.lattice import Lattice
 from ymlab.monte_carlo import metropolis_sweep
 from ymlab.observables import rectangular_wilson_loop
 from ymlab.plaquette import average_plaquette, plaquette
+from ymlab.principal_fits import (
+    fit_correlated_principal_mass,
+    normalized_periodic_principal_correlator,
+)
 from ymlab.resampling import (
     delete_one_block_jackknife_mean,
     moving_block_bootstrap_mean,
@@ -890,6 +894,70 @@ def check_gevp_bootstrap_state_matching() -> str:
         "summaries preserved finite sample counts."
     )
 
+
+def check_correlated_principal_fit() -> str:
+    temporal_extent = 12
+    reference_time = 1
+    exact_mass = 0.61
+
+    principal = normalized_periodic_principal_correlator(
+        lag=np.arange(
+            temporal_extent,
+            dtype=float,
+        ),
+        mass=exact_mass,
+        temporal_extent=temporal_extent,
+        reference_time=reference_time,
+    )
+
+    covariance = np.full(
+        (
+            temporal_extent,
+            temporal_extent,
+        ),
+        1e-5,
+        dtype=float,
+    )
+
+    covariance += np.eye(
+        temporal_extent,
+        dtype=float,
+    ) * 9e-5
+
+    fit = fit_correlated_principal_mass(
+        principal_correlator=principal,
+        covariance=covariance,
+        reference_time=reference_time,
+        fit_start=1,
+        fit_stop=6,
+        shrinkage=0.05,
+        relative_cutoff=1e-12,
+    )
+
+    assert fit.success
+
+    assert np.isclose(
+        fit.mass,
+        exact_mass,
+        atol=1e-5,
+        rtol=1e-5,
+    )
+
+    assert np.isclose(
+        principal[
+            reference_time
+        ],
+        1.0,
+        atol=1e-12,
+        rtol=1e-12,
+    )
+
+    return (
+        "Normalized principal-correlator model "
+        "preserved lambda(t0)=1 and correlated "
+        "fitting recovered an exact synthetic mass."
+    )
+
 def main() -> None:
     checks = [
         ("SU(2) identity/random validation", check_su2_identity_and_random),
@@ -911,6 +979,7 @@ def main() -> None:
         ("Generalized eigenvalue validation", check_generalized_eigenvalue_pipeline),
         ("Correlated spectroscopy fit validation", check_correlated_spectroscopy_fit),
         ("GEVP bootstrap state-matching validation", check_gevp_bootstrap_state_matching),
+        ("Correlated principal-state fit validation", check_correlated_principal_fit),
     ]
 
     results = [run_check(name, function) for name, function in checks]
