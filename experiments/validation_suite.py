@@ -82,6 +82,9 @@ from ymlab.variational import (
     principal_log_effective_masses,
     solve_regularized_gevp,
 )
+from ymlab.overrelaxation import (
+    overrelaxation_sweep,
+)
 from ymlab.validation import compare_action_differences
 from ymlab.wilson_action import number_of_plaquettes, wilson_action
 
@@ -958,6 +961,56 @@ def check_correlated_principal_fit() -> str:
         "fitting recovered an exact synthetic mass."
     )
 
+
+def check_microcanonical_overrelaxation() -> str:
+    lattice = Lattice(
+        shape=(4, 4, 4),
+        cold_start=True,
+        seed=2026,
+    )
+
+    for _ in range(4):
+        metropolis_sweep(
+            lattice=lattice,
+            beta=2.0,
+            epsilon=0.18,
+        )
+
+    action_before = wilson_action(
+        lattice,
+        beta=2.0,
+    )
+
+    result = overrelaxation_sweep(
+        lattice=lattice,
+        beta=2.0,
+    )
+
+    action_after = wilson_action(
+        lattice,
+        beta=2.0,
+    )
+
+    assert result.updated_links > 0
+
+    assert np.isclose(
+        action_before,
+        action_after,
+        atol=1e-8,
+        rtol=1e-10,
+    )
+
+    assert (
+        result.maximum_local_action_error
+        < 1e-9
+    )
+
+    return (
+        "SU(2) microcanonical overrelaxation "
+        "preserved the full Wilson action and "
+        "local staple action to numerical precision."
+    )
+
 def main() -> None:
     checks = [
         ("SU(2) identity/random validation", check_su2_identity_and_random),
@@ -980,6 +1033,7 @@ def main() -> None:
         ("Correlated spectroscopy fit validation", check_correlated_spectroscopy_fit),
         ("GEVP bootstrap state-matching validation", check_gevp_bootstrap_state_matching),
         ("Correlated principal-state fit validation", check_correlated_principal_fit),
+        ("Microcanonical overrelaxation validation", check_microcanonical_overrelaxation),
     ]
 
     results = [run_check(name, function) for name, function in checks]

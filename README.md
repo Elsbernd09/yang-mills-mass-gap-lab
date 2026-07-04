@@ -76,3 +76,14 @@ Scientific Honesty
 This repository is a computational exploration and educational research framework. It does not provide a proof of Yang–Mills existence or of the mass gap. Numerical evidence from lattice models is not equivalent to a rigorous continuum quantum field theory construction.
 Long-Term Vision
 The long-term goal is to create a clean, reproducible, mathematically transparent platform for exploring the geometry and physics of Yang–Mills theory through computation, exposition, and numerical experimentation.
+
+
+## Advanced Sampling Diagnostics
+
+- Exact SU(2) microcanonical overrelaxation reflections
+- Quaternion-norm staple normalization
+- Strict SU(2) projection and lattice membership preservation
+- Local and global Wilson-action preservation audits
+- Hybrid Metropolis-overrelaxation update schedules
+- Observable-dependent integrated autocorrelation comparisons
+- Effective sample size per second sampling-efficiency benchmarks
