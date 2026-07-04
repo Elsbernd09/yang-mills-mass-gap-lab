@@ -66,6 +66,10 @@ from ymlab.su3 import (
     is_traceless,
     random_su3,
 )
+from ymlab.variational import (
+    principal_log_effective_masses,
+    solve_regularized_gevp,
+)
 from ymlab.validation import compare_action_differences
 from ymlab.wilson_action import number_of_plaquettes, wilson_action
 
@@ -622,6 +626,90 @@ def check_operator_correlator_matrix() -> str:
         "finite connected Euclidean correlator matrix."
     )
 
+
+def check_generalized_eigenvalue_pipeline() -> str:
+    energies = np.array(
+        [
+            0.4,
+            0.9,
+        ],
+        dtype=float,
+    )
+
+    mixing = np.array(
+        [
+            [1.0, 0.3],
+            [0.2, 1.1],
+        ],
+        dtype=float,
+    )
+
+    matrices = []
+
+    for lag in range(6):
+        diagonal = np.diag(
+            np.exp(
+                -energies * lag
+            )
+        )
+
+        matrices.append(
+            mixing
+            @ diagonal
+            @ mixing.T
+        )
+
+    matrices = np.asarray(
+        matrices,
+        dtype=float,
+    )
+
+    result = solve_regularized_gevp(
+        correlation_matrices=matrices,
+        reference_time=1,
+        track_states=False,
+    )
+
+    masses = principal_log_effective_masses(
+        result.principal_correlators
+    )
+
+    assert result.retained_rank == 2
+
+    assert np.allclose(
+        result.principal_correlators[
+            1
+        ],
+        1.0,
+        atol=1e-10,
+        rtol=1e-10,
+    )
+
+    assert np.allclose(
+        masses[
+            1:-1,
+            0,
+        ],
+        energies[0],
+        atol=1e-8,
+        rtol=1e-8,
+    )
+
+    assert np.allclose(
+        masses[
+            1:-1,
+            1,
+        ],
+        energies[1],
+        atol=1e-8,
+        rtol=1e-8,
+    )
+
+    return (
+        "Regularized GEVP recovered exact synthetic "
+        "principal correlators and variational masses."
+    )
+
 def main() -> None:
     checks = [
         ("SU(2) identity/random validation", check_su2_identity_and_random),
@@ -640,6 +728,7 @@ def main() -> None:
         ("Local/global Wilson-action consistency", check_local_global_action_consistency),
         ("Spatial smearing pipeline validation", check_spatial_smearing_pipeline),
         ("Operator correlator matrix validation", check_operator_correlator_matrix),
+        ("Generalized eigenvalue validation", check_generalized_eigenvalue_pipeline),
     ]
 
     results = [run_check(name, function) for name, function in checks]
