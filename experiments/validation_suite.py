@@ -110,6 +110,11 @@ from ymlab.reproducibility import (
     configuration_hash,
     create_run_manifest,
 )
+from ymlab.research_campaign import (
+    OverrelaxationCampaignConfig,
+    run_overrelaxation_campaign,
+    summarize_campaign,
+)
 from ymlab.validation import compare_action_differences
 from ymlab.wilson_action import number_of_plaquettes, wilson_action
 
@@ -1313,6 +1318,64 @@ def check_reproducibility_manifest_pipeline() -> str:
         "plus active runtime environment metadata."
     )
 
+
+def check_controlled_research_campaign() -> str:
+    configuration = (
+        OverrelaxationCampaignConfig(
+            shape=(3, 3, 3),
+            betas=(2.0,),
+            seeds=(2033,),
+            schedules=(0, 1),
+            epsilon=0.18,
+            thermalization_sweeps=2,
+            measurement_updates=4,
+            time_direction=0,
+        )
+    )
+
+    records = run_overrelaxation_campaign(
+        configuration=configuration,
+        progress=False,
+    )
+
+    summaries = summarize_campaign(
+        records
+    )
+
+    assert len(
+        records
+    ) == 2
+
+    assert len(
+        summaries
+    ) == 2
+
+    baseline = [
+        summary
+        for summary in summaries
+        if summary.overrelaxation_sweeps == 0
+    ][0]
+
+    assert np.isclose(
+        baseline.mean_plaquette_efficiency_ratio_vs_metropolis,
+        1.0,
+        atol=1e-12,
+        rtol=1e-12,
+    )
+
+    assert np.isclose(
+        baseline.mean_scalar_efficiency_ratio_vs_metropolis,
+        1.0,
+        atol=1e-12,
+        rtol=1e-12,
+    )
+
+    return (
+        "Paired controlled overrelaxation campaign machinery "
+        "executed Metropolis and hybrid schedules and preserved "
+        "unit paired-baseline ESS-per-second ratios."
+    )
+
 def main() -> None:
     checks = [
         ("SU(2) identity/random validation", check_su2_identity_and_random),
@@ -1340,6 +1403,7 @@ def main() -> None:
         ("SU(3) structural lattice validation", check_su3_structural_pipeline),
         ("Ensemble Creutz bootstrap validation", check_ensemble_creutz_bootstrap),
         ("Reproducibility manifest validation", check_reproducibility_manifest_pipeline),
+        ("Controlled research campaign validation", check_controlled_research_campaign),
     ]
 
     results = [run_check(name, function) for name, function in checks]

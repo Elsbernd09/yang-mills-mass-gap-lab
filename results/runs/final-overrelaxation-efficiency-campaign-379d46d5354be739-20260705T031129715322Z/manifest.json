@@ -1,0 +1,60 @@
+{
+  "configuration": {
+    "betas": [
+      1.5,
+      2.0,
+      2.5
+    ],
+    "epsilon": 0.18,
+    "measurement_updates": 180,
+    "schedules": [
+      0,
+      1,
+      2,
+      4
+    ],
+    "seeds": [
+      2026,
+      2027,
+      2028
+    ],
+    "shape": [
+      5,
+      4,
+      4
+    ],
+    "thermalization_sweeps": 60,
+    "time_direction": 0
+  },
+  "configuration_hash": "379d46d5354be739",
+  "created_at_utc": "2026-07-05T03:11:29.715322+00:00",
+  "environment": {
+    "matplotlib_version": "3.9.4",
+    "numpy_version": "2.0.2",
+    "platform_machine": "arm64",
+    "platform_release": "24.6.0",
+    "platform_system": "Darwin",
+    "python_version": "3.9.6",
+    "scipy_version": "1.13.1"
+  },
+  "experiment_name": "final-overrelaxation-efficiency-campaign",
+  "git": {
+    "available": true,
+    "commit": "0fd3d5f9cf87a92de38acf65869ea6c14dac1a6b",
+    "dirty": true
+  },
+  "notes": [
+    "Controlled paired finite-lattice overrelaxation efficiency campaign.",
+    "Three independent seeds are reported descriptively; no formal significance claim is made."
+  ],
+  "output_files": [
+    "campaign_records.csv",
+    "campaign_summary.csv",
+    "campaign_conclusion.json",
+    "figures/plaquette_ess_per_second_vs_beta.png",
+    "figures/scalar_ess_per_second_vs_beta.png",
+    "figures/plaquette_efficiency_ratio_vs_beta.png"
+  ],
+  "runtime_seconds": 354.662964958,
+  "status": "completed"
+}

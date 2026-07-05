@@ -142,3 +142,23 @@ The long-term goal is to create a clean, reproducible, mathematically transparen
 - Registered experiment output-file tracking
 - Failure manifests that preserve exception metadata
 - Configuration-level SU(2) and SU(3) plaquette-chain runners
+
+
+## Final Controlled Research Question
+
+**How does SU(2) microcanonical overrelaxation frequency affect effective sample size per wall-clock second for the average plaquette and a scalar glueball-style composite observable across finite bare Wilson couplings?**
+
+The controlled campaign:
+
+- compares Metropolis, M+1OR, M+2OR, and M+4OR schedules,
+- studies beta 1.5, 2.0, and 2.5,
+- uses independent deterministic seeds,
+- begins paired schedules from shared thermalized configurations,
+- measures plaquette and scalar autocorrelation independently,
+- calculates observable-specific effective sample size,
+- incorporates measured wall-clock runtime,
+- reports ESS per second and paired efficiency ratios,
+- allows the winning schedule to vary by beta and observable,
+- records the complete campaign in a reproducible run manifest.
+
+The study is a finite-lattice computational-methodology experiment. It does not claim continuum or infinite-volume Yang-Mills results.

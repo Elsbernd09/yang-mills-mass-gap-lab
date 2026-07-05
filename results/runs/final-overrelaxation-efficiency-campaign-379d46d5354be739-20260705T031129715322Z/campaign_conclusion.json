@@ -1,0 +1,38 @@
+{
+  "best_schedule_by_beta": {
+    "1.5": {
+      "best_plaquette_efficiency_ratio_vs_metropolis": 1.0,
+      "best_plaquette_ess_per_second": 8.664576635554225,
+      "best_plaquette_schedule": "M",
+      "best_scalar_efficiency_ratio_vs_metropolis": 1.0,
+      "best_scalar_ess_per_second": 9.574361864619961,
+      "best_scalar_schedule": "M"
+    },
+    "2.0": {
+      "best_plaquette_efficiency_ratio_vs_metropolis": 1.0,
+      "best_plaquette_ess_per_second": 7.918051361735429,
+      "best_plaquette_schedule": "M",
+      "best_scalar_efficiency_ratio_vs_metropolis": 1.0,
+      "best_scalar_ess_per_second": 9.165032245722662,
+      "best_scalar_schedule": "M"
+    },
+    "2.5": {
+      "best_plaquette_efficiency_ratio_vs_metropolis": 1.0,
+      "best_plaquette_ess_per_second": 5.048134278655426,
+      "best_plaquette_schedule": "M",
+      "best_scalar_efficiency_ratio_vs_metropolis": 1.2681972728087425,
+      "best_scalar_ess_per_second": 6.944008131251099,
+      "best_scalar_schedule": "M+1OR"
+    }
+  },
+  "interpretation_rule": "A schedule is described as more efficient only where its measured mean ESS/sec exceeds the paired Metropolis baseline. The campaign does not infer formal significance from three independent seeds.",
+  "plaquette_schedule_win_counts": {
+    "M": 3
+  },
+  "research_question": "How does SU(2) microcanonical overrelaxation frequency affect ESS/sec for the average plaquette and a scalar glueball-style composite observable across finite bare Wilson couplings?",
+  "scalar_schedule_win_counts": {
+    "M": 2,
+    "M+1OR": 1
+  },
+  "scope": "Finite 3D SU(2) Wilson lattice computational-methodology study; no continuum or infinite-volume claim."
+}
