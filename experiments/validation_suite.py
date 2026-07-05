@@ -102,6 +102,10 @@ from ymlab.generic_gauge_transformations import (
 from ymlab.generic_validation import (
     compare_generic_action_differences,
 )
+from ymlab.wilson_ensemble import (
+    block_bootstrap_creutz_ratios,
+    create_rectangular_loop_basis,
+)
 from ymlab.validation import compare_action_differences
 from ymlab.wilson_action import number_of_plaquettes, wilson_action
 
@@ -1177,6 +1181,80 @@ def check_su3_structural_pipeline() -> str:
         "preserved Wilson action and average plaquette."
     )
 
+
+def check_ensemble_creutz_bootstrap() -> str:
+    sigma = 0.35
+
+    basis = create_rectangular_loop_basis(
+        maximum_width=3,
+        maximum_height=3,
+    )
+
+    rng = np.random.default_rng(
+        2031
+    )
+
+    rows = []
+
+    for _ in range(60):
+        common = rng.normal(
+            loc=0.0,
+            scale=0.001,
+        )
+
+        row = []
+
+        for width, height in basis.shapes:
+            exact = np.exp(
+                -sigma
+                * width
+                * height
+            )
+
+            row.append(
+                exact
+                * np.exp(
+                    common
+                    + rng.normal(
+                        loc=0.0,
+                        scale=0.001,
+                    )
+                )
+            )
+
+        rows.append(
+            row
+        )
+
+    result = block_bootstrap_creutz_ratios(
+        loop_ensemble=np.asarray(
+            rows,
+            dtype=float,
+        ),
+        basis=basis,
+        n_bootstrap=50,
+        block_size=3,
+        seed=2032,
+    )
+
+    assert len(
+        result.creutz_points
+    ) == 4
+
+    for point in result.creutz_points:
+        assert point.valid_fraction > 0.95
+
+        assert abs(
+            point.bootstrap_mean
+            - sigma
+        ) < 0.02
+
+    return (
+        "Configuration-level block bootstrap preserved "
+        "joint Wilson-loop measurements and recovered "
+        "an exact synthetic area-law Creutz scale."
+    )
+
 def main() -> None:
     checks = [
         ("SU(2) identity/random validation", check_su2_identity_and_random),
@@ -1202,6 +1280,7 @@ def main() -> None:
         ("Microcanonical overrelaxation validation", check_microcanonical_overrelaxation),
         ("Generic GaugeLattice backend validation", check_generic_gauge_lattice_backend),
         ("SU(3) structural lattice validation", check_su3_structural_pipeline),
+        ("Ensemble Creutz bootstrap validation", check_ensemble_creutz_bootstrap),
     ]
 
     results = [run_check(name, function) for name, function in checks]

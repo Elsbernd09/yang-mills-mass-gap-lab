@@ -114,3 +114,16 @@ The long-term goal is to create a clean, reproducible, mathematically transparen
 - Independent short-chain SU(3) finite-lattice diagnostics
 - Plaquette autocorrelation and effective-sample-size analysis
 - Explicit SU(3) link-membership error monitoring
+
+
+## Ensemble Wilson-Loop Uncertainty
+
+- Configuration-level rectangular Wilson-loop measurement matrices
+- Complete post-thermalization Wilson-loop ensembles
+- Circular moving-block bootstrap of complete configuration rows
+- Joint nonlinear Creutz-ratio uncertainty propagation
+- Bootstrap Creutz means, standard errors, medians, and 95% intervals
+- Explicit invalid-replicate and valid-fraction diagnostics
+- Autocorrelation-informed heuristic block-size selection
+- Square Creutz string-tension-style plateau diagnostics
+- Wilson-loop relative-noise growth analysis
