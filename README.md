@@ -127,3 +127,18 @@ The long-term goal is to create a clean, reproducible, mathematically transparen
 - Autocorrelation-informed heuristic block-size selection
 - Square Creutz string-tension-style plateau diagnostics
 - Wilson-loop relative-noise growth analysis
+
+
+## Reproducible Experiment Runner
+
+- Central validated experiment registry
+- `ymlab list` command for registered numerical experiments
+- `ymlab run` command for deterministic configured runs
+- Canonical JSON configuration hashing with SHA-256
+- Independent timestamped run directories
+- JSON run manifests with package and platform versions
+- Best-effort Git commit and dirty-tree provenance
+- Runtime duration and execution status metadata
+- Registered experiment output-file tracking
+- Failure manifests that preserve exception metadata
+- Configuration-level SU(2) and SU(3) plaquette-chain runners

@@ -1,0 +1,16 @@
+{
+  "beta": 5.5,
+  "epsilon": 0.05,
+  "gauge_group": "SU(3)",
+  "mean_action_per_plaquette": 0.8165065182778193,
+  "mean_average_plaquette": 0.8515442694040329,
+  "mean_measurement_acceptance": 0.7604938271604939,
+  "mean_thermal_acceptance": 0.7530864197530865,
+  "plaquette_effective_sample_size": 2.631432338031315,
+  "plaquette_tau_int": 0.9500529289194473,
+  "shape": [
+    3,
+    3,
+    3
+  ]
+}

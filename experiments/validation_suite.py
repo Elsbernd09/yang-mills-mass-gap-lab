@@ -106,6 +106,10 @@ from ymlab.wilson_ensemble import (
     block_bootstrap_creutz_ratios,
     create_rectangular_loop_basis,
 )
+from ymlab.reproducibility import (
+    configuration_hash,
+    create_run_manifest,
+)
 from ymlab.validation import compare_action_differences
 from ymlab.wilson_action import number_of_plaquettes, wilson_action
 
@@ -1255,6 +1259,60 @@ def check_ensemble_creutz_bootstrap() -> str:
         "an exact synthetic area-law Creutz scale."
     )
 
+
+def check_reproducibility_manifest_pipeline() -> str:
+    first_configuration = {
+        "beta": 2.0,
+        "shape": [
+            4,
+            4,
+        ],
+        "seed": 2026,
+    }
+
+    second_configuration = {
+        "seed": 2026,
+        "shape": [
+            4,
+            4,
+        ],
+        "beta": 2.0,
+    }
+
+    first_hash = configuration_hash(
+        first_configuration
+    )
+
+    second_hash = configuration_hash(
+        second_configuration
+    )
+
+    assert first_hash == second_hash
+
+    manifest = create_run_manifest(
+        experiment_name=(
+            "validation-reproducibility"
+        ),
+        configuration=(
+            first_configuration
+        ),
+    )
+
+    assert (
+        manifest.configuration_hash
+        == first_hash
+    )
+
+    assert manifest.environment.python_version
+
+    assert manifest.environment.numpy_version
+
+    return (
+        "Canonical configuration hashing was deterministic "
+        "and run manifests captured configuration identity "
+        "plus active runtime environment metadata."
+    )
+
 def main() -> None:
     checks = [
         ("SU(2) identity/random validation", check_su2_identity_and_random),
@@ -1281,6 +1339,7 @@ def main() -> None:
         ("Generic GaugeLattice backend validation", check_generic_gauge_lattice_backend),
         ("SU(3) structural lattice validation", check_su3_structural_pipeline),
         ("Ensemble Creutz bootstrap validation", check_ensemble_creutz_bootstrap),
+        ("Reproducibility manifest validation", check_reproducibility_manifest_pipeline),
     ]
 
     results = [run_check(name, function) for name, function in checks]

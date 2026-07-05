@@ -16,3 +16,6 @@ dependencies = [
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+
+[project.scripts]
+ymlab = "ymlab.cli:main"

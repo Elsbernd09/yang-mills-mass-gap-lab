@@ -1,0 +1,37 @@
+{
+  "configuration": {
+    "beta": 2.0,
+    "epsilon": 0.18,
+    "measurement_sweeps": 25,
+    "seed": 2026,
+    "shape": [
+      4,
+      4
+    ],
+    "thermalization_sweeps": 10
+  },
+  "configuration_hash": "1c440f5e1da6fb9d",
+  "created_at_utc": "2026-07-05T02:48:52.400467+00:00",
+  "environment": {
+    "matplotlib_version": "3.9.4",
+    "numpy_version": "2.0.2",
+    "platform_machine": "arm64",
+    "platform_release": "24.6.0",
+    "platform_system": "Darwin",
+    "python_version": "3.9.6",
+    "scipy_version": "1.13.1"
+  },
+  "experiment_name": "su2-plaquette",
+  "git": {
+    "available": true,
+    "commit": "07cf34eee7d98bec2ac2cb970911d44d2f32122e",
+    "dirty": true
+  },
+  "notes": [],
+  "output_files": [
+    "measurements.csv",
+    "summary.json"
+  ],
+  "runtime_seconds": 0.05879683399999999,
+  "status": "completed"
+}
