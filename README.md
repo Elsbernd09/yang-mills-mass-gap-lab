@@ -101,3 +101,16 @@ The long-term goal is to create a clean, reproducible, mathematically transparen
 - Generic rectangular Wilson loops
 - Numerical SU(2) old-versus-generic backend equivalence audit
 - Working SU(3) GaugeLattice and Metropolis prototype path
+
+
+## SU(3) Finite-Lattice Prototype
+
+- Generic 3x3 SU(3) GaugeLattice evolution
+- SU(3) local-versus-global Wilson-action difference validation
+- Generic site-local gauge transformation engine
+- Numerical SU(3) Wilson-action gauge-invariance validation
+- Numerical SU(3) average-plaquette gauge-invariance validation
+- Closed SU(3) rectangular Wilson-loop gauge-invariance tests
+- Independent short-chain SU(3) finite-lattice diagnostics
+- Plaquette autocorrelation and effective-sample-size analysis
+- Explicit SU(3) link-membership error monitoring

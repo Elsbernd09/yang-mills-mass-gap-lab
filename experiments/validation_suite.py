@@ -88,9 +88,20 @@ from ymlab.overrelaxation import (
 from ymlab.gauge_lattice import GaugeLattice
 from ymlab.generic_gauge import (
     generic_average_plaquette,
+    generic_metropolis_sweep,
     generic_wilson_action,
 )
-from ymlab.group_interface import su2_group
+from ymlab.group_interface import (
+    su2_group,
+    su3_group,
+)
+from ymlab.generic_gauge_transformations import (
+    gauge_transform_generic_lattice,
+    random_generic_gauge_field,
+)
+from ymlab.generic_validation import (
+    compare_generic_action_differences,
+)
 from ymlab.validation import compare_action_differences
 from ymlab.wilson_action import number_of_plaquettes, wilson_action
 
@@ -1067,6 +1078,105 @@ def check_generic_gauge_lattice_backend() -> str:
         "and strict group membership."
     )
 
+
+def check_su3_structural_pipeline() -> str:
+    lattice = GaugeLattice(
+        shape=(3, 3, 3),
+        group=su3_group(),
+        cold_start=True,
+        seed=2030,
+    )
+
+    for _ in range(4):
+        generic_metropolis_sweep(
+            lattice=lattice,
+            beta=5.5,
+            epsilon=0.05,
+        )
+
+    site = (
+        1,
+        2,
+        0,
+    )
+
+    mu = 1
+
+    proposal = (
+        lattice.group.small_random(
+            0.05,
+            np.random.default_rng(
+                2031
+            ),
+        )
+        @ lattice.get_link(
+            site,
+            mu,
+        )
+    )
+
+    comparison = (
+        compare_generic_action_differences(
+            lattice=lattice,
+            site=site,
+            mu=mu,
+            proposal=proposal,
+            beta=5.5,
+            atol=1e-9,
+            rtol=1e-9,
+        )
+    )
+
+    assert comparison.consistent
+
+    gauge_field = random_generic_gauge_field(
+        lattice=lattice,
+        rng=np.random.default_rng(
+            2032
+        ),
+    )
+
+    transformed = (
+        gauge_transform_generic_lattice(
+            lattice=lattice,
+            gauge_field=gauge_field,
+        )
+    )
+
+    action_before = generic_wilson_action(
+        lattice,
+        beta=5.5,
+    )
+
+    action_after = generic_wilson_action(
+        transformed,
+        beta=5.5,
+    )
+
+    assert np.isclose(
+        action_before,
+        action_after,
+        atol=1e-8,
+        rtol=1e-10,
+    )
+
+    assert np.isclose(
+        generic_average_plaquette(
+            lattice
+        ),
+        generic_average_plaquette(
+            transformed
+        ),
+        atol=1e-10,
+        rtol=1e-10,
+    )
+
+    return (
+        "SU(3) local/global action differences agreed "
+        "and a random local SU(3) gauge transformation "
+        "preserved Wilson action and average plaquette."
+    )
+
 def main() -> None:
     checks = [
         ("SU(2) identity/random validation", check_su2_identity_and_random),
@@ -1091,6 +1201,7 @@ def main() -> None:
         ("Correlated principal-state fit validation", check_correlated_principal_fit),
         ("Microcanonical overrelaxation validation", check_microcanonical_overrelaxation),
         ("Generic GaugeLattice backend validation", check_generic_gauge_lattice_backend),
+        ("SU(3) structural lattice validation", check_su3_structural_pipeline),
     ]
 
     results = [run_check(name, function) for name, function in checks]
