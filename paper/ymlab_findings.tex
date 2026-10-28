@@ -1,0 +1,115 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,booktabs,graphicx,hyperref}
+\title{Efficiency decomposition, aggregation sensitivity and reproducibility\\
+in a finite-lattice overrelaxation study}
+\author{ymlab analysis contributors}
+\date{\today}
+\begin{document}
+\maketitle
+\begin{abstract}
+We analyse the paired overrelaxation-efficiency campaign of the Yang--Mills Mass Gap
+Laboratory of Elsbernd. The per-pair ESS-per-second ratio factors exactly into a
+decorrelation gain and a cost factor; in all 27 paired conditions the cost
+penalty (2.8--8.4$\times$) outweighed the gain
+(at most 3.11$\times$), so no ratio exceeded one (maximum 0.94).
+We show that two natural aggregation rules disagree, that $\tau_{\mathrm{int}}$ is deterministic while
+ESS/s is not, and report a cross-platform re-run in which hybrid chains did not reproduce.
+This is a finite-lattice methodology study and makes no statement about the continuum mass gap.
+\end{abstract}
+
+\section{Setting}
+The study uses the lattice and campaign of Elsbernd, \emph{Yang--Mills Mass Gap Laboratory} \url{https://github.com/Elsbernd09/yang-mills-mass-gap-lab}: SU(2) Wilson action on a
+$5\times4\times4$ lattice, $\beta\in\{1.5, 2, 2.5\}$,
+seeds 2026, 2027, 2028, 180 measured updates per chain, and the
+schedules M, M+1OR, M+2OR, M+4OR (one Metropolis sweep followed by 0, 1, 2, 4 microcanonical overrelaxation sweeps).
+The campaign and its manifests are Elsbernd's; the analysis below only post-processes
+the recorded results.
+
+\section{Symbolic models}
+The following relations were derived or verified with \texttt{sympy} (\texttt{ymlab.symbolic}) and are
+numerically cross-checked against the laboratory code in the test-suite.
+\paragraph{Lattice coupling.} Wilson coupling for SU(N).
+\begin{equation}
+  \beta = \frac{2 N}{g^{2}}
+\end{equation}
+\paragraph{Bare coupling from beta.} bare coupling solved from the Wilson coupling relation.
+\begin{equation}
+  g = \frac{\sqrt{2} \sqrt{N}}{\sqrt{\beta}}
+\end{equation}
+\paragraph{Su(2) plaquette term.} for a unit quaternion, $\det U = a_{0}^{2} + a_{1}^{2} + a_{2}^{2} + a_{3}^{2} = 1$.
+\begin{equation}
+  w_{p} = 1 - a_{0}
+\end{equation}
+\paragraph{Effective sample size.} ESS from integrated autocorrelation time.
+\begin{equation}
+  N_{eff} = \frac{n_{meas}}{2 \tau}
+\end{equation}
+\paragraph{Efficiency ratio.} paired ESS-per-second ratio; independent of the number of measurements.
+\begin{equation}
+  R = \frac{t_{M} \tau_{M}}{t_{OR} \tau_{OR}}
+\end{equation}
+\paragraph{Break-even.} Metropolis autocorrelation time at which the efficiency ratio equals one.
+\begin{equation}
+  \tau_{M} = \frac{t_{OR} \tau_{OR}}{t_{M}}
+\end{equation}
+\paragraph{Ar(1) integrated autocorrelation time.} geometric sum of autocorrelations for $|\varphi|<1$.
+\begin{equation}
+  \tau_{int} = \frac{\varphi + 1}{2 - 2 \varphi}
+\end{equation}
+\paragraph{Cosh effective mass.} the estimator ratio $[C(t-1)+C(t+1)]/2C(t)$ equals $\cosh{\left(m \right)}$, independent of $t$.
+\begin{equation}
+  m_{eff} = \operatorname{acosh}{\left(\cosh{\left(m \right)} \right)}
+\end{equation}
+\paragraph{Creutz area law.} perimeter and constant terms cancel in the Creutz ratio.
+\begin{equation}
+  \chi = \sigma
+\end{equation}
+
+\section{Efficiency decomposition}
+\begin{figure}[ht]\centering\includegraphics[width=0.62\linewidth]{gain_vs_cost}\caption{Per-pair decorrelation gain against cost penalty (log axes). Points below the dashed line would have $R>1$; none do.}\end{figure}
+
+Across all 27 pairs the plaquette ratio lay in [0.05, 0.94];
+the gain exceeded one in 12 pairs (maximum 3.11) while the cost penalty lay in
+[2.8, 8.4]. For this implementation the additional sweeps were not repaid.
+\begin{figure}[ht]\centering\includegraphics[width=0.62\linewidth]{ess_by_schedule}\caption{Plaquette ESS/s by schedule and $\\beta$; dots are individual seeds.}\end{figure}
+
+
+\section{Aggregation sensitivity}
+The mean of paired ratios and the ratio of mean ESS/s are different statistics.
+\begin{table}[ht]\centering\small
+\begin{tabular}{rrrrrrr}
+\toprule
+$\beta$ & schedule & mean gain & mean cost factor & mean of ratios & ratio of means & pair range \\
+\midrule
+1.5 & M+1OR & 0.93 & 0.357 & 0.333 & 0.281 & 0.08--0.51 \\
+1.5 & M+2OR & 1.08 & 0.217 & 0.234 & 0.207 & 0.13--0.42 \\
+1.5 & M+4OR & 1.02 & 0.122 & 0.124 & 0.114 & 0.09--0.19 \\
+2 & M+1OR & 1.10 & 0.354 & 0.388 & 0.263 & 0.20--0.75 \\
+2 & M+2OR & 1.32 & 0.216 & 0.284 & 0.152 & 0.08--0.67 \\
+2 & M+4OR & 1.44 & 0.121 & 0.175 & 0.103 & 0.05--0.38 \\
+2.5 & M+1OR & 1.30 & 0.347 & 0.454 & 0.404 & 0.20--0.94 \\
+2.5 & M+2OR & 1.04 & 0.212 & 0.221 & 0.227 & 0.17--0.26 \\
+2.5 & M+4OR & 1.13 & 0.119 & 0.134 & 0.133 & 0.09--0.18 \\
+\bottomrule
+\end{tabular}
+\caption{Aggregates per $(\beta,\text{schedule})$, three seeds each.}
+\end{table}
+They differ by up to 86\% of the ratio of means.
+\begin{figure}[ht]\centering\includegraphics[width=0.95\linewidth]{aggregation_sensitivity}\caption{Per-seed ratios with the two aggregates; dashed line is break-even.}\end{figure}
+
+
+\section{Determinism and reproduction}
+Two published campaigns with identical configuration hash agree in $\tau_{\mathrm{int}}$ to
+0.0e+00 (maximum) and in ESS/s to within 3.9\%.
+\begin{figure}[ht]\centering\includegraphics[width=0.85\linewidth]{determinism}\caption{Run-to-run agreement on one machine.}\end{figure}
+
+On Linux x86\_64 (Python 3.13.18, NumPy 2.5.3) the published seed-2026 conditions were re-run; the published runs were made on Darwin arm64 (Python 3.9.6, NumPy 2.0.2). The pure-Metropolis chains reproduce the published $\tau_{int}$ to within 2.2e-13; 0 of 9 hybrid chains reproduce it exactly, with local-to-published $\tau_{int}$ ratios between 0.88 and 4.12. Median runtime here was 2.2$\times$ the published runtime. The cause of the hybrid divergence was not isolated (platform, library version, and floating-point ordering are all confounded).
+
+\section{Limits}
+Three seeds, one lattice, SU(2), plaquette emphasised; the ranking depends on the
+Python/NumPy cost structure. The cross-platform divergence is observed, not explained.
+
+\paragraph{Acknowledgement.} All simulation code, the campaign design and the recorded data are the work
+of Michael Elsbernd; this document is an analysis layer on top of that work.
+\end{document}
